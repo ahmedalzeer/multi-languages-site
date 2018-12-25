@@ -1,0 +1,77 @@
+how to make multi language site in laravel <br>
+in kernal.php
+add
+
+protected $middlewareGroups = [
+        'web' => [
+            // ...
+            \App\Http\Middleware\Locale::class, // <-- THE LOCALE MIDDLEWARE IS AFTER 'START-SESSION' 
+            // ...
+        ]
+    ];
+    
+################################################################################################################################    
+    now make middleware Locale.php
+################################################################################################################################    
+    
+    <?php // app/Http/Middleware/Locale.php
+namespace App\Http\Middleware;
+use Closure;
+use Session;
+use Config;
+use App;
+class Locale
+{
+    public function handle($request, Closure $next)
+    {
+        $language = Session::get('language', Config::get('app.locale'));
+        $language = array_key_exists($language, ['ar'=>'arabic','en'=>'english']) ? $language : Config::get('app.fallback_locale');
+        App::setLocale($language);
+        return $next($request);
+    }
+}
+
+################################################################################################################################    
+    now in your view add this
+################################################################################################################################
+
+    <?php // resources/views/layouts/site.php
+<form id='locale-form' method='post' action="{{ route('site.language')}}">
+    {{ csrf_field() }}
+    <input type='hidden' id='language_field' name='locale' value='{{ App::getLocale() }}'/>
+</form>
+            
+<button id='ar' type='button'>AR</button>
+<button id='en' type='button'>EN</button>
+<script>
+document.addEventListener("DOMContentLoaded", function () 
+{
+    $ar = document.querySelector('button#ar');
+    $en = document.querySelector('button#en');
+    $ar.addEventListener('click', function (e) {
+        document.querySelector('#locale-form #language_field').value = 'ar'
+        document.querySelector('#locale-form').submit();
+    })
+    $en.addEventListener('click', function (e) {
+        document.querySelector('#locale-form #language_field').value = 'en'
+        document.querySelector('#locale-form').submit();
+    })
+})
+</script>
+
+################################################################################################################################    
+    now make controller SiteController and add this function to it
+################################################################################################################################
+
+public function language(Request $request)
+    {
+        \Session::put('language', $request->get('locale', 'en'));
+        \App::setLocale($request->get('locale', 'pt'));
+        return \Redirect::back();
+    }
+    
+    ################################################################################################################################    
+    finally add this route in web.php
+################################################################################################################################
+
+Route::post('/language', 'SiteController@language')->name('site.language');
